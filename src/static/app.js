@@ -59,8 +59,48 @@ document.addEventListener("DOMContentLoaded", () => {
             emailSpan.className = "participant-email";
             emailSpan.textContent = p;
 
+            // Remove (unregister) button
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "participant-remove";
+            removeBtn.title = "Remove participant";
+            removeBtn.setAttribute('aria-label', `Remove ${p}`);
+            removeBtn.innerHTML = "✖";
+
+            // Click handler to unregister participant
+            removeBtn.addEventListener("click", async (e) => {
+              e.preventDefault();
+              try {
+                const resp = await fetch(
+                  `/activities/${encodeURIComponent(name)}/unregister?email=${encodeURIComponent(p)}`,
+                  { method: "POST" }
+                );
+
+                const result = await resp.json();
+
+                if (resp.ok) {
+                  messageDiv.textContent = result.message;
+                  messageDiv.className = "message success";
+                  // Refresh list after successful removal
+                  fetchActivities();
+                } else {
+                  messageDiv.textContent = result.detail || "Failed to remove participant";
+                  messageDiv.className = "message error";
+                }
+
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+              } catch (err) {
+                console.error("Error removing participant:", err);
+                messageDiv.textContent = "Failed to remove participant. Please try again.";
+                messageDiv.className = "message error";
+                messageDiv.classList.remove("hidden");
+                setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+              }
+            });
+
             li.appendChild(avatar);
             li.appendChild(emailSpan);
+            li.appendChild(removeBtn);
             ul.appendChild(li);
           });
         }
@@ -100,14 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        messageDiv.className = "message success";
         signupForm.reset();
 
         // Refresh activities to reflect new participant and availability
-        fetchActivities();
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.className = "message error";
       }
 
       messageDiv.classList.remove("hidden");
